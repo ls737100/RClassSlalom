@@ -1,0 +1,287 @@
+---
+title: "Class Day 1"
+author: "Joe Dion"
+date: "May 29, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+#Variable Types
+Variable types drive model types
+
+```{r Variable Types, echo=FALSE}
+#Load the insurance data set into R from a csv file
+
+fileloc <-"C:/Users/JoeD/Dropbox/Northwestern/411/Unit 2/Assignment 2/R Model/InsuranceCSVFile.csv"
+insurance <- read.table(fileloc, header=TRUE, sep=",")
+
+
+#Create a histogram of the target variable, customer was in an accident
+bin <- hist(insurance$TARGET_FLAG, main="Dichotomous Variable = Classification", col=c("red", "blue"), xlab = "Customers in Accidents (0=No/1=Yes)")
+bin
+
+#Create a histogram of the amount target variable, cost to insurance company for customers in an #accident
+
+hist(insurance$TARGET_AMT, main = "Not Dichotomous",col=c("red", "blue", "green"))
+hist(insurance$TARGET_AMT, main = "Not Dichotomous",breaks = 100,col=c("red", "blue", "green", "yellow", "orange"))
+
+#Remove 0 values to more easily see distribution
+Amounts <- subset(insurance, TARGET_AMT > 0)
+
+#Distribution of amounts without zero amounts
+cont <- hist(Amounts$TARGET_AMT, main = "Continuous Variable", breaks = 50, col=c("red", "blue", "green", "yellow", "orange"), xlab = "Dollar Losses")
+plot(cont, main = "Continuous Variable",breaks = 50, col=c("red", "blue", "green", "yellow", "orange"), xlab = "Dollar Losses" )
+
+#Density plot of target amount, more appropriate for continuous variables
+d <- density(Amounts$TARGET_AMT)
+plot(d, main="Kernel Density of Target Variable(Continuous)")
+polygon(d, col="red", border="blue")
+
+
+```
+
+#Load a second data set
+
+
+```{r, echo=FALSE}
+
+filelocnew <-"C:/Users/JoeD/Dropbox/Northwestern/411/Unit 3/Assignment 3/R files/WINE.csv"
+wine <- read.table(filelocnew, header=TRUE, sep=",")
+
+#Plot second data set with discrete variables
+poisson <- hist(wine$TARGET, main = "Discrete Variable",col=c("red", "blue"), xlab = "Number of Cases Sold")
+plot(poisson, main = "Discrete Variable",col=c("red", "blue"), xlab = "Number of Cases Sold" )
+
+```
+
+#Comparison of Variable Types
+Lesson #1, different types of variable distributions will call for different kinds of algorithms.  
+
+```{r, echo=FALSE}
+opar <- par(no.readonly = TRUE)
+par(mfrow=c(2,2))
+plot(bin, main="Dichotomous Variable = Classification", col=c("red", "blue"), xlab = "Customers in Accidents (0=No/1=Yes)")
+plot(cont, main = "Continuous Variable = Regression",breaks = 100,col=c("red", "blue", "green", "yellow", "orange"), xlab = "Dollar Losses" )
+plot(poisson, main = "Discrete Variable = Depends",col=c("red", "blue"), xlab = "Number of Cases Sold" )
+par(opar)
+
+```
+
+#Clean up R
+
+```{r, echo=FALSE}
+
+ls()
+rm(Amounts)
+rm(list=ls())
+
+
+```
+
+#Reload the insurance data set and look at some useful R commands
+
+```{r, echo=FALSE}
+fileloc <-"C:/Users/JoeD/Dropbox/Northwestern/411/Unit 2/Assignment 2/R Model/InsuranceCSVFile.csv"
+insurance <- read.table(fileloc, header=TRUE, sep=",")
+
+#Summary will provide counts or quartile values depending on the type of variables 
+summary(insurance)
+
+#Determine the type of object
+typeof(insurance)
+
+#Structure will give more info on what is in the data set. 
+str(insurance)
+
+#object name + $ + column name isolates to that column
+summary(insurance$AGE)
+summary(insurance[5])
+summary(insurance[5:7])
+summary(insurance[c(5:7,11)])
+
+#Colnames will show the name of each column
+colnames(insurance)
+
+#nrow and ncol to get number of rows or columns
+nrow(insurance)
+ncol(insurance)
+
+#Most objects can be assigned to a variable
+x <- nrow(insurance)
+y <- colnames(insurance)
+
+
+```
+
+
+```{r, echo=FALSE}
+
+str(insurance)
+myvariables <- c()
+correlationset <- insurance[c(2:7,15,18,22,24:25)]
+str(correlationset)
+cor(correlationset)
+
+correlationset$AGE[is.na(correlationset$AGE)] <- 0
+correlationset$YOJ[is.na(correlationset$YOJ)] <- 0
+correlationset$CAR_AGE[is.na(correlationset$CAR_AGE)] <- 0
+
+cor(correlationset)
+
+
+
+
+```
+
+
+
+
+
+#Build a Decision Tree Model
+
+
+
+```{r, echo=FALSE}
+
+df <- insurance
+colnames(df)
+
+install.packages("rattle")
+install.packages("ROCR")
+
+library(rpart)
+library(rattle)
+library(ROCR)
+
+options (digits = 8)
+DecisionTree <- rpart(TARGET_FLAG ~ KIDSDRIV +  AGE + HOMEKIDS +  YOJ + INCOME + PARENT1 + HOME_VAL + MSTATUS + SEX + EDUCATION + JOB + TRAVTIME + CAR_USE + BLUEBOOK + TIF + CAR_TYPE + RED_CAR + OLDCLAIM + CLM_FREQ + REVOKED + MVR_PTS + CAR_AGE + URBANICITY ,  data = df)
+
+install.packages("RColorBrewer")
+install.packages("rpart.plot")
+
+plot(DecisionTree)
+text(DecisionTree)
+fancyRpartPlot(DecisionTree)
+
+df$decisiontreePred<-predict(DecisionTree, newdata = df, type="vector")
+
+
+#plot ROC Curve
+decisiontreetrain <-prediction(as.numeric(df$decisiontreePred), df$TARGET_FLAG)
+decisiontreeROC <-performance(decisiontreetrain, "tpr", "fpr")
+plot(decisiontreeROC)
+
+#Confusion matrix
+dtcm <- table(truth = df$TARGET_FLAG, prediction = df$decisiontreePred>=.75)
+dtcm
+
+str(dtcm)
+plot(dtcm)
+
+P <- (dtcm[1,1]+dtcm[2,2])/ sum(dtcm)
+
+
+print(paste("Training Correctly Classified = ",P))
+
+
+```
+
+
+```{r Random Forest, echo=FALSE}
+
+summary(df)
+
+install.packages("randomForest")
+library(randomForest)
+
+#Random Forest does not like null values and several of the variables have null values. For now we'll just replace those with 0s, we will look at more sophisticated and more appropriate ways to deal with null values later
+
+df$AGE[is.na(df$AGE)] <- 0
+df$YOJ[is.na(df$YOJ)] <- 0
+df$CAR_AGE[is.na(df$CAR_AGE)] <- 0
+
+str(df$INCOME)
+
+
+
+rftrain <- randomForest(TARGET_FLAG ~ KIDSDRIV +  AGE   + PARENT1  + MSTATUS + SEX + EDUCATION + JOB + TRAVTIME + CAR_USE  + TIF + CAR_TYPE + RED_CAR + CLM_FREQ + REVOKED + MVR_PTS + CAR_AGE + URBANICITY + INCOME  + OLDCLAIM + BLUEBOOK + HOME_VAL  , data = df, importance = TRUE)
+
+df$INCOME <- as.numeric(df$INCOME) 
+df$OLDCLAIM <- as.numeric(df$OLDCLAIM)
+df$BLUEBOOK <- as.numeric(df$BLUEBOOK)
+df$HOME_VAL <- as.numeric(df$HOME_VAL)
+
+rftrain <- randomForest(TARGET_FLAG ~ KIDSDRIV +  AGE   + PARENT1  + MSTATUS + SEX + EDUCATION + JOB + TRAVTIME + CAR_USE  + TIF + CAR_TYPE + RED_CAR + CLM_FREQ + REVOKED + MVR_PTS + CAR_AGE + URBANICITY + INCOME  + OLDCLAIM + BLUEBOOK + HOME_VAL  , data = df, importance = TRUE)
+
+str(df)
+
+df$RFPred<-predict(rftrain, newdata = df, type="response")
+
+head(df$RFPred,100)
+#plot ROC Curve
+rfroc <-prediction(as.numeric(df$RFPred), df$TARGET_FLAG)
+randforestROC <-performance(rfroc, "tpr", "fpr")
+plot(randforestROC)
+
+#Confusion matrix
+rfcm <- table(truth = df$TARGET_FLAG, prediction = df$RFPred>=.25)
+rfcm
+
+#print(attributes(performance(rfcm, 'auc'))$y.values[[1]])
+
+P <- (rfcm[1,1]+rfcm[2,2])/ sum(rfcm)
+P
+
+
+```
+
+```{r Compare models, echo=FALSE}
+
+plot(decisiontreeROC, lty = 1, lwd = 2, col = "green", main = "ROC Curve for Decision Tree & Random Forest")
+plot(randforestROC, add = TRUE,lty = 2, lwd = 2, col = "red" )
+legend("bottomright", c("Decision Tree", "Random Forest"), lty=c(1,2), lwd = 2, col = c("green", "red"))
+abline(a=0, b= 1, lwd = 2)
+
+
+
+```
+
+
+```{r Bagging, echo=FALSE}
+
+#Sum of Squared Error
+error<-sqrt((sum((df$TARGET_FLAG-df$decisiontreePred)^2))/nrow(df))
+
+install.packages("foreach")
+library(foreach)  
+length_divisor<-4  
+iterations<-1000  
+
+predictions<-foreach(m=1:iterations,.combine=cbind) %do% {  
+training_positions <- sample(nrow(df), size=floor((nrow(df)/length_divisor)))  
+train_pos<-1:nrow(df) %in% training_positions 
+
+dt_fit<-rpart(TARGET_FLAG ~ KIDSDRIV +  AGE + HOMEKIDS +  YOJ + INCOME + PARENT1 + HOME_VAL + MSTATUS + SEX + EDUCATION + JOB + TRAVTIME + CAR_USE + BLUEBOOK + TIF + CAR_TYPE + RED_CAR + OLDCLAIM + CLM_FREQ + REVOKED + MVR_PTS + CAR_AGE + URBANICITY,  data=df[train_pos,])  
+df$bagging <- predict(dt_fit,newdata=df)  
+}  
+
+
+predictions<-rowMeans(predictions)  
+errornew<-sqrt((sum((df$TARGET_FLAG-df$bagging)^2))/nrow(df)) 
+
+errornew
+
+dtrocbagged <-prediction(as.numeric(df$bagging), df$TARGET_FLAG)
+dtbaggedROC <-performance(dtrocbagged, "tpr", "fpr")
+plot(dtbaggedROC)
+
+
+
+
+
+
+```

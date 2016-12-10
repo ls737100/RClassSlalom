@@ -19,9 +19,6 @@ Variable types drive model types
 fileloc <-"C:/Users/JoeD/Dropbox/Northwestern/411/Unit 2/Assignment 2/R Model/InsuranceCSVFile.csv"
 insurance <- read.table(fileloc, header=TRUE, sep=",")
 
-
-
-
 #Create a histogram of the target variable, customer was in an accident
 bin <- hist(insurance$TARGET_FLAG, main="Dichotomous Variable = Classification", col=c("red", "blue"), xlab = "Customers in Accidents (0=No/1=Yes)")
 bin
@@ -42,8 +39,6 @@ plot(cont, main = "Continuous Variable",breaks = 50, col=c("red", "blue", "green
 d <- density(Amounts$TARGET_AMT)
 plot(d, main="Kernel Density of Target Variable(Continuous)")
 polygon(d, col="red", border="blue")
-
-unique(Amounts$TARGET_AMT)
 
 
 ```
@@ -209,8 +204,6 @@ df$YOJ[is.na(df$YOJ)] <- 0
 df$CAR_AGE[is.na(df$CAR_AGE)] <- 0
 
 str(df$INCOME)
-
-
 
 rftrain <- randomForest(TARGET_FLAG ~ KIDSDRIV +  AGE   + PARENT1  + MSTATUS + SEX + EDUCATION + JOB + TRAVTIME + CAR_USE  + TIF + CAR_TYPE + RED_CAR + CLM_FREQ + REVOKED + MVR_PTS + CAR_AGE + URBANICITY + INCOME  + OLDCLAIM + BLUEBOOK + HOME_VAL  , data = df, importance = TRUE)
 
